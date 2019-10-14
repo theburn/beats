@@ -2,7 +2,7 @@ package epoint
 
 import "time"
 
-func GAtCurrentDate() string {
+func GetCurrentDate() string {
 	t := time.Now()
 	return t.Format("2006-01-02")
 }
