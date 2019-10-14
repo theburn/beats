@@ -73,7 +73,7 @@ func (out *fileOutput) init(beat beat.Info, c config) error {
 	if c.Filename != "" {
 		path = filepath.Join(c.Path, epoint.GetCurrentDate(), c.Filename)
 	} else {
-		path = filepath.Join(c.Path, epoint.GetCurrentDate, out.beat.Beat)
+		path = filepath.Join(c.Path, epoint.GetCurrentDate(), out.beat.Beat)
 	}
 
 	out.filePath = path
