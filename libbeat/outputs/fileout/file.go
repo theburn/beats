@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/burn/beats/epoint"
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/common/file"
@@ -70,10 +71,11 @@ func makeFileout(
 
 func (out *fileOutput) init(beat beat.Info, c config) error {
 	var path string
+	currentDate := epoint.GetCurrentDate()
 	if c.Filename != "" {
-		path = filepath.Join(c.Path, c.Filename)
+		path = filepath.Join(c.Path, currentDate, c.Filename)
 	} else {
-		path = filepath.Join(c.Path, out.beat.Beat)
+		path = filepath.Join(c.Path, currentDate, out.beat.Beat)
 	}
 
 	out.filePath = path
