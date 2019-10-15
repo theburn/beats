@@ -152,8 +152,6 @@ func NewFileRotator(filename string, options ...RotatorOption) (*Rotator, error)
 		opt(r)
 	}
 
-	r.filename = r.filename + "." + epoint.GetCurrentDate() + ".log"
-
 	r.datetime = time.Now()
 	r.date = epoint.GetCurrentDate()
 
@@ -183,6 +181,10 @@ func NewFileRotator(filename string, options ...RotatorOption) (*Rotator, error)
 	}
 
 	return r, nil
+}
+
+func (r *Rotator) getFilename() string {
+	return r.filename + "." + r.date + ".log"
 }
 
 // Write writes the given bytes to the file. This implements io.Writer. If
@@ -220,6 +222,7 @@ func (r *Rotator) Write(data []byte) (int, error) {
 			return 0, err
 		}
 	} else if r.date != tNowStr {
+		r.date = tNowStr
 		if err := r.rotate(rotateReasonReachDate); err != nil {
 			return 0, err
 		}
@@ -259,6 +262,26 @@ func (r *Rotator) Close() error {
 	return r.closeFile()
 }
 
+func (r *Rotator) delOlderFiles() error {
+	diff_time := r.maxBackups * 3600 * 24
+	now_time := time.Now().Unix() //当前时间，使用Unix时间戳
+	basepath := filepath.Dir(r.filename)
+
+	err := filepath.Walk(basepath, func(path string, f os.FileInfo, err error) error {
+		if f == nil {
+			return err
+		}
+
+		file_time := f.ModTime().Unix()
+		if (now_time - file_time) > int64(diff_time) {
+			os.RemoveAll(path)
+		}
+		return nil
+	})
+
+	return err
+}
+
 func (r *Rotator) backupName(n uint) string {
 	if n == 0 {
 		return r.filename
@@ -287,7 +310,7 @@ func (r *Rotator) openNew() error {
 		return errors.Wrap(err, "failed to make directories for new file")
 	}
 
-	_, err = os.Stat(r.filename)
+	_, err = os.Stat(r.getFilename())
 	if err == nil {
 		if err = r.rotate(rotateReasonInitializing); err != nil {
 			return err
@@ -303,7 +326,7 @@ func (r *Rotator) openFile() error {
 		return errors.Wrap(err, "failed to make directories for new file")
 	}
 
-	r.file, err = os.OpenFile(r.filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, r.permissions)
+	r.file, err = os.OpenFile(r.getFilename(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, r.permissions)
 	if err != nil {
 		return errors.Wrap(err, "failed to open new file")
 	}
@@ -395,6 +418,7 @@ func (r *Rotator) rotate(reason rotateReason) error {
 		return errors.Wrap(err, "failed to rotate backups")
 	}
 
+	r.delOlderFiles()
 	return r.purgeOldBackups()
 }
 
