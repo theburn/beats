@@ -28,7 +28,6 @@ import (
 	"github.com/elastic/beats/libbeat/outputs"
 	"github.com/elastic/beats/libbeat/outputs/codec"
 	"github.com/elastic/beats/libbeat/publisher"
-	"github.com/theburn/beats/libbeat/epoint"
 )
 
 func init() {
@@ -71,9 +70,9 @@ func makeFileout(
 func (out *fileOutput) init(beat beat.Info, c config) error {
 	var path string
 	if c.Filename != "" {
-		path = filepath.Join(c.Path, epoint.GetCurrentDate(), c.Filename)
+		path = filepath.Join(c.Path, c.Filename)
 	} else {
-		path = filepath.Join(c.Path, epoint.GetCurrentDate(), out.beat.Beat)
+		path = filepath.Join(c.Path, out.beat.Beat)
 	}
 
 	out.filePath = path

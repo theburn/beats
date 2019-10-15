@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/theburn/beats/libbeat/epoint"
 )
 
 // MaxBackupsLimit is the upper bound on the number of backup files. Any values
@@ -39,6 +40,7 @@ const (
 	rotateReasonFileSize
 	rotateReasonManualTrigger
 	rotateReasonTimeInterval
+	rotateReasonReachDate
 )
 
 func (rr rotateReason) String() string {
@@ -47,6 +49,8 @@ func (rr rotateReason) String() string {
 		return "initializing"
 	case rotateReasonFileSize:
 		return "file size"
+	case rotateReasonReachDate:
+		return "reach date"
 	case rotateReasonManualTrigger:
 		return "manual trigger"
 	case rotateReasonTimeInterval:
@@ -69,6 +73,8 @@ type Rotator struct {
 	interval        time.Duration
 	intervalRotator *intervalRotator // Optional, may be nil
 	redirectStderr  bool
+	datetime        time.Time
+	date            string
 
 	file  *os.File
 	size  uint
@@ -146,6 +152,11 @@ func NewFileRotator(filename string, options ...RotatorOption) (*Rotator, error)
 		opt(r)
 	}
 
+	r.filename = r.filename + "." + epoint.GetCurrentDate() + ".log"
+
+	r.datetime = time.Now()
+	r.date = epoint.GetCurrentDate()
+
 	if r.maxSizeBytes == 0 {
 		return nil, errors.New("file rotator max file size must be greater than 0")
 	}
@@ -181,6 +192,9 @@ func (r *Rotator) Write(data []byte) (int, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
+	tNow := time.Now()
+	tNowStr := tNow.Format("2006-01-02")
+
 	dataLen := uint(len(data))
 	if dataLen > r.maxSizeBytes {
 		return 0, errors.Errorf("data size (%d bytes) is greater than "+
@@ -200,6 +214,13 @@ func (r *Rotator) Write(data []byte) (int, error) {
 		}
 	} else if r.size+dataLen > r.maxSizeBytes {
 		if err := r.rotate(rotateReasonFileSize); err != nil {
+			return 0, err
+		}
+		if err := r.openFile(); err != nil {
+			return 0, err
+		}
+	} else if r.date != tNowStr {
+		if err := r.rotate(rotateReasonReachDate); err != nil {
 			return 0, err
 		}
 		if err := r.openFile(); err != nil {
