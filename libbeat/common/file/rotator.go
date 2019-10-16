@@ -419,6 +419,7 @@ func (r *Rotator) rotate(reason rotateReason) error {
 	}
 
 	r.delOlderFiles()
+
 	return r.purgeOldBackups()
 }
 
